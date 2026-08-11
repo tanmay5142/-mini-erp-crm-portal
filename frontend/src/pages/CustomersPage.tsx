@@ -70,15 +70,23 @@ export default function CustomersPage() {
   async function handleSave() {
     setError("");
     try {
+      const payload = Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, v === "" ? undefined : v])
+      );
       if (editing) {
-        await api.put(`/customers/${editing.id}`, form);
+        await api.put(`/customers/${editing.id}`, payload);
       } else {
-        await api.post("/customers", form);
+        await api.post("/customers", payload);
       }
       setShowModal(false);
       fetchCustomers();
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to save customer");
+      const details = err.response?.data?.details;
+      if (Array.isArray(details) && details.length > 0) {
+        setError(details.map((d: any) => `${d.path}: ${d.message}`).join(", "));
+      } else {
+        setError(err.response?.data?.error || "Failed to save customer");
+      }
     }
   }
 

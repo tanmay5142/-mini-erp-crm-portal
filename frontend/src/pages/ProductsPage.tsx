@@ -51,16 +51,25 @@ export default function ProductsPage() {
   async function handleSave() {
     setError("");
     try {
-      await api.post("/products", {
-        ...form,
-        unitPrice: parseFloat(form.unitPrice),
-        currentStock: parseInt(form.currentStock) || 0,
-        minStockAlertQty: parseInt(form.minStockAlertQty) || 0,
-      });
+      const payload: any = {
+        name: form.name || undefined,
+        sku: form.sku || undefined,
+        category: form.category || undefined,
+        unitPrice: form.unitPrice !== "" ? parseFloat(form.unitPrice) : undefined,
+        currentStock: form.currentStock !== "" ? parseInt(form.currentStock) : 0,
+        minStockAlertQty: form.minStockAlertQty !== "" ? parseInt(form.minStockAlertQty) : 0,
+        location: form.location || undefined,
+      };
+      await api.post("/products", payload);
       setShowModal(false);
       fetchProducts();
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to save product");
+      const details = err.response?.data?.details;
+      if (Array.isArray(details) && details.length > 0) {
+        setError(details.map((d: any) => `${d.path}: ${d.message}`).join(", "));
+      } else {
+        setError(err.response?.data?.error || "Failed to save product");
+      }
     }
   }
 
