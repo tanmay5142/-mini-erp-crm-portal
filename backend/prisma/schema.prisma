@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SALES
+  WAREHOUSE
+  ACCOUNTS
+}
+
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+  DISTRIBUTOR
+}
+
+enum CustomerStatus {
+  LEAD
+  ACTIVE
+  INACTIVE
+}
+
+enum MovementType {
+  IN
+  OUT
+}
+
+enum ChallanStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+
+  customersCreated   Customer[]        @relation("CustomerCreatedBy")
+  followUps          FollowUp[]
+  stockMovements     StockMovement[]
+  challansCreated    SalesChallan[]
+
+  @@map("users")
+}
+
+model Customer {
+  id           String         @id @default(uuid())
+  name         String
+  mobile       String
+  email        String?
+  businessName String?
+  gstNumber    String?
+  customerType CustomerType
+  address      String?
+  status       CustomerStatus @default(LEAD)
+  followUpDate DateTime?
+  notes        String?
+
+  createdById  String
+  createdBy    User           @relation("CustomerCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  followUps    FollowUp[]
+  challans     SalesChallan[]
+
+  @@map("customers")
+}
+
+model FollowUp {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  note       String
+  createdById String
+  createdBy  User     @relation(fields: [createdById], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@map("follow_ups")
+}
+
+model Product {
+  id                String   @id @default(uuid())
+  name              String
+  sku               String   @unique
+  category          String?
+  unitPrice         Decimal  @db.Decimal(10, 2)
+  currentStock      Int      @default(0)
+  minStockAlertQty  Int      @default(0)
+  location          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  stockMovements    StockMovement[]
+  challanItems      ChallanItem[]
+
+  @@map("products")
+}
+
+model StockMovement {
+  id            String       @id @default(uuid())
+  productId     String
+  product       Product      @relation(fields: [productId], references: [id])
+  quantity      Int
+  movementType  MovementType
+  reason        String
+  createdById   String
+  createdBy     User         @relation(fields: [createdById], references: [id])
+  createdAt     DateTime     @default(now())
+
+  @@map("stock_movements")
+}
+
+model SalesChallan {
+  id             String        @id @default(uuid())
+  challanNumber  String        @unique
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id])
+  totalQuantity  Int
+  status         ChallanStatus @default(DRAFT)
+  createdById    String
+  createdBy      User          @relation(fields: [createdById], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  items          ChallanItem[]
+
+  @@map("sales_challans")
+}
+
+// Snapshot of product data at the time of the challan, as required by the spec.
+// productId is kept for reference, but name/sku/price are copied so the
+// challan record stays accurate even if the product is later edited.
+model ChallanItem {
+  id              String       @id @default(uuid())
+  challanId       String
+  challan         SalesChallan @relation(fields: [challanId], references: [id])
+  productId       String
+  product         Product      @relation(fields: [productId], references: [id])
+
+  productNameSnap String
+  skuSnap         String
+  unitPriceSnap   Decimal      @db.Decimal(10, 2)
+
+  quantity        Int
+
+  @@map("challan_items")
+}
