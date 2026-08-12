@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Prisma } from "@prisma/client";
+import { Prisma, Product } from "@prisma/client";
 import { prisma } from "../utils/prisma";
 import { AppError, asyncHandler } from "../middleware/errorHandler";
 import {
@@ -36,7 +36,7 @@ export const createChallan = asyncHandler(async (req: Request, res: Response) =>
     throw new AppError("One or more products could not be found", 400);
   }
 
-  const productMap = new Map(products.map((p) => [p.id, p]));
+  const productMap = new Map<string, Product>(products.map((p) => [p.id, p]));
   const totalQuantity = data.items.reduce((sum, i) => sum + i.quantity, 0);
 
   // If confirming immediately, validate stock BEFORE touching the DB.
@@ -175,9 +175,9 @@ export const updateChallanStatus = asyncHandler(async (req: Request, res: Respon
 
   // DRAFT -> CONFIRMED: validate and deduct stock.
   if (challan.status === "DRAFT" && newStatus === "CONFIRMED") {
-    const productIds = challan.items.map((i: { productId: string }) => i.productId);
+    const productIds = challan.items.map((i) => i.productId);
     const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
-    const productMap = new Map(products.map((p: { id: string; currentStock: number }) => [p.id, p]));
+    const productMap = new Map<string, Product>(products.map((p) => [p.id, p]));
 
     for (const item of challan.items) {
       const product = productMap.get(item.productId);
