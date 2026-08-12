@@ -51,9 +51,9 @@ for credentials.
 ## Deployment
 
 Both projects are set up for free-tier deployment:
-- Database: Neon or Supabase (Postgres)
-- Backend: Render or Railway
-- Frontend: Vercel or Netlify
+- Database: Neon
+- Backend: Vercel
+- Frontend: Vercel
 
 Full steps are in each subfolder's README.
 
