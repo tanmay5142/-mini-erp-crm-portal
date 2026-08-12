@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../utils/prisma";
 import { AppError, asyncHandler } from "../middleware/errorHandler";
 import {
@@ -53,7 +54,7 @@ export const createChallan = asyncHandler(async (req: Request, res: Response) =>
 
   const challanNumber = await generateChallanNumber();
 
-  const challan = await prisma.$transaction(async (tx) => {
+  const challan = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const created = await tx.salesChallan.create({
       data: {
         challanNumber,
@@ -174,9 +175,9 @@ export const updateChallanStatus = asyncHandler(async (req: Request, res: Respon
 
   // DRAFT -> CONFIRMED: validate and deduct stock.
   if (challan.status === "DRAFT" && newStatus === "CONFIRMED") {
-    const productIds = challan.items.map((i) => i.productId);
+    const productIds = challan.items.map((i: { productId: string }) => i.productId);
     const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
-    const productMap = new Map(products.map((p) => [p.id, p]));
+    const productMap = new Map(products.map((p: { id: string; currentStock: number }) => [p.id, p]));
 
     for (const item of challan.items) {
       const product = productMap.get(item.productId);
@@ -188,7 +189,7 @@ export const updateChallanStatus = asyncHandler(async (req: Request, res: Respon
       }
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       for (const item of challan.items) {
         await tx.product.update({
           where: { id: item.productId },
@@ -216,7 +217,7 @@ export const updateChallanStatus = asyncHandler(async (req: Request, res: Respon
 
   // CONFIRMED -> CANCELLED: restock.
   if (challan.status === "CONFIRMED" && newStatus === "CANCELLED") {
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       for (const item of challan.items) {
         await tx.product.update({
           where: { id: item.productId },

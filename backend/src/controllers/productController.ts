@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../utils/prisma";
 import { AppError, asyncHandler } from "../middleware/errorHandler";
 import {
@@ -47,7 +48,7 @@ export const listProducts = asyncHandler(async (req: Request, res: Response) => 
   // Low-stock filter applied post-query since it compares two columns
   // (currentStock vs minStockAlertQty), which Prisma can't express directly.
   if (lowStock) {
-    items = items.filter((p) => p.currentStock <= p.minStockAlertQty);
+    items = items.filter((p: Prisma.ProductGetPayload<object>) => p.currentStock <= p.minStockAlertQty);
     total = items.length;
   }
 
